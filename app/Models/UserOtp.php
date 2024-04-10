@@ -26,18 +26,34 @@ class UserOtp extends Model
     public function sendSMS($receiverNumber)
     {
         $message = "Login OTP is ".$this->otp;
+
         try {
 
-            $account_sid = getenv("TWILIO_SID");
-            $auth_token = getenv("TWILIO_TOKEN");
-            $twilio_number = getenv("TWILIO_FROM");
+            $twilio_sid = env('TWILIO_SID');
+            $twilio_token = env('TWILIO_TOKEN');
+            $twilio_phone_number = env('TWILIO_FROM');
 
-            $client = new Client($account_sid, $auth_token);
-            $client->messages->create($receiverNumber, [
-                'from' => $twilio_number,
-                'body' => $message]);
+            $to = $receiverNumber;
 
-            info('SMS Sent Successfully.');
+            $url = "https://api.twilio.com/2010-04-01/Accounts/$twilio_sid/Messages.json";
+
+            $data = [
+                'To' => $to,
+                'From' => $twilio_phone_number,
+                'Body' => $message,
+            ];
+
+            $post = http_build_query($data);
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_USERPWD, "$twilio_sid:$twilio_token");
+
+            $response = curl_exec($ch);
+
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
         } catch (Exception $e) {
             info("Error: ". $e->getMessage());
